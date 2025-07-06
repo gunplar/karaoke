@@ -1,10 +1,11 @@
 #!/bin/bash
 
 INPUT="$1"
+ALT_AUDIO="$2"
 
-# === Check input ===
 if [ -z "$INPUT" ]; then
-  echo "Usage: $0 input.mp3|input.wav"
+  echo "Usage: $0 input.mp3|input.wav [alternate_audio.mp3|wav]"
+  echo "Example: $0 song.mp3 narration.wav blue"
   exit 1
 fi
 
@@ -13,19 +14,15 @@ if [ ! -f "$INPUT" ]; then
   exit 1
 fi
 
-EXT="${INPUT##*.}"
-if [[ "$EXT" != "mp3" && "$EXT" != "wav" ]]; then
-  echo "Error: Unsupported file type '$EXT'. Only mp3 and wav are supported."
+if [ -n "$ALT_AUDIO" ] && [ ! -f "$ALT_AUDIO" ]; then
+  echo "Error: Alternate audio file '$ALT_AUDIO' not found."
   exit 1
 fi
 
-BASENAME=$(basename "$INPUT" .${EXT})
-OUTPUT="${BASENAME}.mp4"
+BASENAME=$(basename "$INPUT" .${INPUT##*.})
+OUTPUT="${BASENAME}_spectrum.mp4"
 
 # === Determine encoder ===
-VIDEO_CODEC=""
-VIDEO_OPTS=""
-
 echo "🔍 Checking for NVIDIA NVENC..."
 if ffmpeg -hide_banner -loglevel error -f lavfi -i nullsrc=s=1280x720 -frames:v 1 -c:v h264_nvenc -f null - 2>/dev/null; then
   VIDEO_CODEC="h264_nvenc"
@@ -44,13 +41,33 @@ else
   fi
 fi
 
-echo "🎬 Starting processing: '$INPUT' -> '$OUTPUT'"
+# === Build inputs ===
+INPUTS=(-i "$INPUT")
+if [ -n "$ALT_AUDIO" ]; then
+  INPUTS+=(-i "$ALT_AUDIO")
+fi
 
-# === Run FFmpeg ===
-ffmpeg -y -i "$INPUT" \
-  -filter_complex "showwaves=s=1280x720:mode=line:rate=25" \
+# === Build filter ===
+FILTER="[0:a]volume=0.5,showwaves=s=1280x720:mode=line:rate=25"
+
+# === Build FFmpeg command ===
+CMD=(ffmpeg -y "${INPUTS[@]}" \
+  -filter_complex "$FILTER[v]" \
+  -map "[v]" \
+  -map 1:a \
   -c:v $VIDEO_CODEC $VIDEO_OPTS \
   -c:a aac -b:a 192k \
-  "$OUTPUT"
+  "$OUTPUT")
 
-echo "✅ Done: '$OUTPUT' created (or failed if errors above)"
+echo "👉 Running command:"
+printf "%q " "${CMD[@]}"
+echo
+
+"${CMD[@]}"
+STATUS=$?
+
+if [ $STATUS -eq 0 ]; then
+  echo "✅ Done: '$OUTPUT' created"
+else
+  echo "❌ FFmpeg failed — check errors above"
+fi
