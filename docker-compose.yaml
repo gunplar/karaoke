@@ -1,0 +1,23 @@
+services:
+  app:
+    image: rdelorenzo/tunesplit:2.3.0
+    environment:
+      - ENVIRONMENT=production
+      - USE_GPU=true
+    container_name: tunesplit_app
+    ports:
+      - "3003:3003"
+    volumes:
+      - models:/root/.cache/torch/hub/checkpoints
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  models:
+    name: tunesplit_models
