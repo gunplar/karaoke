@@ -5,7 +5,7 @@ ALT_AUDIO="$2"
 
 if [ -z "$INPUT" ]; then
   echo "Usage: $0 input.mp3|input.wav [alternate_audio.mp3|wav]"
-  echo "Example: $0 song.mp3 narration.wav blue"
+  echo "Example: $0 song.mp3 narration.wav"
   exit 1
 fi
 
@@ -48,10 +48,10 @@ if [ -n "$ALT_AUDIO" ]; then
 fi
 
 # === Build filter ===
-FILTER="[0:a]volume=0.5,showwaves=s=1280x720:mode=line:rate=25"
+FILTER="[0:a]volume=0.3,showwaves=s=1280x720:mode=line:rate=25"
 
 # === Build FFmpeg command ===
-CMD=(ffmpeg -y "${INPUTS[@]}" \
+CMD=(ffmpeg -loglevel warning -y "${INPUTS[@]}" \
   -filter_complex "$FILTER[v]" \
   -map "[v]" \
   -map 1:a \
