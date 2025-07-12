@@ -56,7 +56,7 @@ CMD=(ffmpeg -loglevel warning -y "${INPUTS[@]}" \
   -map "[v]" \
   -map 1:a \
   -c:v $VIDEO_CODEC $VIDEO_OPTS \
-  -c:a aac -b:a 192k \
+  -c:a aac -b:a 256k \
   "$OUTPUT")
 
 echo "👉 Running command:"
